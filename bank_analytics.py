@@ -218,7 +218,7 @@ def get_bank_liquidity_ratio(regn, month):
 def get_bank_all_metrics(regn, month):
     bank_info = find_bank_by_code(regn)
     if bank_info is not None and len(bank_info) > 0:
-        bank_name = bank_info.iloc[0]['bank_name']
+        bank_name = bank_info[0]['bank_name']
     else:
         bank_name = f'Банк {regn}'
     
