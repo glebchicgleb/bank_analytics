@@ -50,6 +50,13 @@ def find_bank_by_code(code):
         return None
     return result.to_dict('records')
 
+def get_bank_name_safe(regn):
+    bank_info = find_bank_by_code(regn)
+    if bank_info is not None:
+        return bank_info[0]['bank_name']
+    else:
+        return f"Банк {regn}"
+
 def get_months():
     months = ACCOUNTS['report_date'].unique()
     months = sorted(months)
@@ -214,7 +221,7 @@ def get_bank_liquidity_ratio(regn, month):
     
     return ratio
 
-
+# Все показатели
 def get_bank_all_metrics(regn, month):
     bank_info = find_bank_by_code(regn)
     if bank_info is not None and len(bank_info) > 0:
@@ -239,3 +246,87 @@ def get_bank_all_metrics(regn, month):
     }
     
     return metrics
+
+# Доступные месяца
+def get_available_months():
+    months = ACCOUNTS['report_date'].unique()
+    return sorted(months)
+
+# Рост показателя за месяц
+def get_growth(regn, month, month_previous, metric_func):
+
+    metric1 = metric_func(regn, month)
+    metric2 = metric_func(regn, month_previous)
+
+    if metric2 == 0:
+        return 0
+    
+    result = ((metric1/metric2)-1)*100
+    
+    return result
+
+# Рост всех показателй за месяц
+def get_all_growth(regn, month, month_previous):
+        metrics = [
+        ('Активы', get_bank_assets),
+        ('Кредиты физлицам', get_bank_loans_people),
+        ('Кредиты юрлицам', get_bank_loans_companies),
+        ('Вклады', get_bank_deposits),
+        ('Капитал', get_bank_capital),
+        ('Прибыль', get_bank_profit),
+        ('ROA (рентабельность)', get_bank_roa),
+        ('LTD (кредиты/вклады)', get_bank_ltd),
+        ('Достаточность капитала', get_bank_capital_ratio),
+        ('Ликвидность', get_bank_liquidity_ratio)
+        ]
+        result = {}
+        for name, func in metrics:
+            growth = get_growth(regn, month, month_previous, func)
+            result[name] = growth
+        return result
+
+# Предыдущий месяц
+def get_prev_month(month):
+    months = get_available_months()
+    indx = months.index(month)
+    if indx > 0:
+        return months[indx-1]
+    else:
+        return None
+
+# Сравнение банков за месяц
+def compare_banks(bank_list, month):
+    prev_month = get_prev_month(month)
+    if prev_month is None:
+        return None
+    result = []
+    for bank in bank_list:
+        metrics = get_bank_all_metrics(bank, month)
+        growth = get_all_growth(bank, month, prev_month)
+        bank_data = {**metrics, **growth}
+        result.append(bank_data)
+    df = pd.DataFrame(result)
+    return df
+
+# Рейтинг
+def get_rating(month, metric_name, metric_func, ascending=False, limit=10, min_value=1e6):
+    all_banks = ACCOUNTS['REGN'].unique()
+    
+    data = []
+    for regn in all_banks:
+        try:
+            value = metric_func(regn, month)
+            if value > min_value:
+                data.append({
+                    'Код банка': regn,
+                    metric_name: value
+                })
+        except:
+            pass
+    
+    df = pd.DataFrame(data)
+    df = df.sort_values(metric_name, ascending=ascending)
+    df['Название банка'] = df['Код банка'].apply(get_bank_name_safe)
+    df = df[['Код банка', 'Название банка', metric_name]]
+    
+    return df.head(limit).reset_index(drop=True)
