@@ -66,7 +66,6 @@ def bank_page(regn):
         chart_assets=chart_assets
     )
 
-# Добавьте фильтр форматирования
 @app.template_filter('format_metric_value')
 def format_metric_value(value, metric_key):
     """Форматирует значение метрики в зависимости от её типа"""
@@ -81,23 +80,18 @@ def format_metric_value(value, metric_key):
         return "{:,.2f}".format(value)
 
 
-# Новый маршрут для сравнения
 @app.route("/compare")
 def compare_page():
     months = get_available_months()
     
-    # Получаем параметры из URL
     bank_regns = request.args.getlist("banks")
     month = request.args.get("month", months[-1])
     metric = request.args.get("metric", "assets")
     
-    # Загружаем список всех доступных банков
     all_banks = get_available_banks_list()
     
-    # Получаем название метрики используя существующую функцию
     metric_name, _ = get_metric_function(metric)
     
-    # Если банки выбраны, загружаем данные для сравнения
     compare_data = None
     chart_data = None
     
@@ -108,11 +102,9 @@ def compare_page():
             "datasets": []
         }
         
-        # Получаем все месяцы для графиков
         all_months_list = get_available_months()
         chart_data["labels"] = all_months_list
         
-        # Цвета для графиков
         colors = [
             {"bg": "rgba(139, 60, 44, 0.7)", "border": "#8b3c2c"},
             {"bg": "rgba(61, 90, 60, 0.7)", "border": "#3d5a3c"},
@@ -121,7 +113,6 @@ def compare_page():
         ]
         
         for i, regn in enumerate(bank_regns[:4]):
-            # Используем существующую функцию get_bank_all_metrics
             metrics = get_bank_all_metrics(regn, month)
             
             compare_data.append({
@@ -130,7 +121,6 @@ def compare_page():
                 "metrics": metrics
             })
             
-            # Получаем историю для графика
             history = get_metric_history(regn, metric)
             values = history["value"].tolist()
             
