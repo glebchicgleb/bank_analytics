@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Карточка банка</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="page">
+
+<a class="back-link" href="/">← Назад к списку банков</a>
+
+<div class="bank-header">
+    <h1 class="bank-title">{{ metrics["Название банка"] }}</h1>
+
+    <div class="bank-info">
+        <p><span>Код банка:</span> <b class="num">{{ metrics["Код банка"] }}</b></p>
+        <p><span>Период:</span> <b class="num">{{ month | format_month }}</b></p>
+    </div>
+
+    <div class="status-block">
+        <span>Статус:</span>
+
+        <b class="status 
+            {% if status == 'Надежный' %}status-good{% endif %}
+            {% if status == 'Удовлетворительный' %}status-medium{% endif %}
+            {% if status == 'Рискованный' %}status-bad{% endif %}
+        ">
+            {{ status }}
+        </b>
+    </div>
+</div>
+
+<div class="panel">
+    <form method="get" class="month-form">
+        <label>Выбрать месяц:</label>
+
+        <select name="month">
+            {% for m in months %}
+                <option value="{{ m }}" {% if m == month %}selected{% endif %}>
+                    {{ m | format_month }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Показать</button>
+    </form>
+</div>
+
+<div class="section-title">Ключевые показатели</div>
+
+<div class="metrics-grid">
+
+    <div class="metric-box wide">
+        <div class="metric-title">Активы</div>
+        <div class="metric-value num">{{ "{:,.0f}".format(metrics["Активы"]).replace(",", ".") }} руб</div>
+    </div>
+
+    <div class="metric-box">
+        <div class="metric-title">Капитал</div>
+        <div class="metric-value num">{{ "{:,.0f}".format(metrics["Капитал"]).replace(",", ".") }} руб</div>
+    </div>
+
+    <div class="metric-box">
+        <div class="metric-title">Прибыль</div>
+        <div class="metric-value num">{{ "{:,.0f}".format(metrics["Прибыль"]).replace(",", ".") }} руб</div>
+    </div>
+
+    <div class="metric-box">
+        <div class="metric-title">ROA</div>
+        <div class="metric-value num">{{ "{:.2f}%".format(metrics["ROA (рентабельность)"]) }}</div>
+    </div>
+
+    <div class="metric-box wide">
+        <div class="metric-title">Кредиты / вклады</div>
+        <div class="metric-value num">{{ "{:.2f}%".format(metrics["LTD (кредиты/вклады)"]) }}</div>
+    </div>
+
+    <div class="metric-box">
+        <div class="metric-title">Ликвидность</div>
+        <div class="metric-value num">{{ "{:.2f}%".format(metrics["Ликвидность"]) }}</div>
+    </div>
+
+    <div class="metric-box">
+        <div class="metric-title">Достаточность капитала</div>
+        <div class="metric-value num">{{ "{:.2f}%".format(metrics["Достаточность капитала"]) }}</div>
+    </div>
+
+    <div class="metric-box">
+        <div class="metric-title">Кредиты всего</div>
+        <div class="metric-value num">{{ "{:,.0f}".format(metrics["Кредиты всего"]).replace(",", ".") }} руб</div>
+    </div>
+
+    <div class="metric-box">
+        <div class="metric-title">Вклады</div>
+        <div class="metric-value num">{{ "{:,.0f}".format(metrics["Вклады"]).replace(",", ".") }} руб</div>
+    </div>
+
+</div>
+
+<div class="section-title">График активов</div>
+
+<div class="panel">
+    <canvas id="assetsChart"></canvas>
+</div>
+
+<div class="section-title">История активов</div>
+
+<div class="panel">
+    <table>
+        <tr>
+            <th>Месяц</th>
+            <th>Активы</th>
+        </tr>
+
+        {% for row in history %}
+        <tr>
+            <td class="num">{{ row.month | format_month }}</td>
+            <td class="num">{{ "{:,.0f}".format(row.assets).replace(",", ".") }} руб</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const chartMonths = {{ chart_months | tojson }};
+    const chartAssets = {{ chart_assets | tojson }};
+
+    const ctx = document.getElementById('assetsChart');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartMonths,
+            datasets: [{
+                label: 'Активы банка',
+                data: chartAssets,
+                borderWidth: 2,
+                tension: 0,
+                borderColor: '#8b3c2c',
+                backgroundColor: 'rgba(139, 60, 44, 0.1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            const value = context.parsed.y;
+                            label += formatMoney(value);
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            return formatAxisValue(value);
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        callback: function(value, index) {
+                            return formatMonth(chartMonths[index]);
+                        },
+                        maxTicksLimit: 12
+                    }
+                }
+            }
+        }
+    });
+
+    function formatMoney(value) {
+        if (value >= 1000000000) {
+            return (value / 1000000000).toFixed(1) + ' млрд руб';
+        } else if (value >= 1000000) {
+            return (value / 1000000).toFixed(1) + ' млн руб';
+        } else if (value >= 1000) {
+            return (value / 1000).toFixed(1) + ' тыс руб';
+        }
+        return Math.round(value).toLocaleString('ru-RU').replace(/,/g, '.') + ' руб';
+    }
+
+    function formatAxisValue(value) {
+        if (value >= 1000000000) {
+            return (value / 1000000000).toFixed(1) + ' млрд';
+        } else if (value >= 1000000) {
+            return (value / 1000000).toFixed(0) + ' млн';
+        } else if (value >= 1000) {
+            return (value / 1000).toFixed(0) + ' тыс';
+        }
+        return value;
+    }
+
+    function formatMonth(monthStr) {
+        const year = monthStr.substring(0, 4);
+        const monthNum = monthStr.substring(4, 6);
+        const monthNames = ['', 'янв', 'фев', 'мар', 'апр', 'май', 'июн', 
+                           'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+        return monthNames[parseInt(monthNum)] + ' ' + year;
+    }
+</script>
+
+</div>
+
+</body>
+</html>

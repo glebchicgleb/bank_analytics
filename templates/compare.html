@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Сравнение банков</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="page">
+
+<a class="back-link" href="/">← Назад к списку банков</a>
+
+<h1>Сравнение банков</h1>
+
+<div class="section-title">Параметры сравнения</div>
+
+<div class="panel">
+    <form method="get" action="/compare" class="compare-form">
+        
+        <div class="compare-row">
+            <div style="flex: 1;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 500;">
+                    Выберите банки для сравнения (от 2 до 4):
+                </label>
+                <div class="bank-checkboxes">
+                    {% for bank in all_banks %}
+                    <label class="bank-checkbox">
+                        <input type="checkbox" 
+                               name="banks" 
+                               value="{{ bank.REGN }}"
+                               {% if bank.REGN in selected_banks %}checked{% endif %}>
+                        <span>{{ bank.bank_name }}</span>
+                        <span style="color: #8b8b8b; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+                            ({{ bank.REGN }})
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="compare-row">
+            <label>
+                Период:
+                <select name="month">
+                    {% for m in months %}
+                        <option value="{{ m }}" {% if m == month %}selected{% endif %}>
+                            {{ m | format_month }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+            
+            <label>
+                Показатель для графика:
+                <select name="metric">
+                    <option value="assets" {% if metric == "assets" %}selected{% endif %}>Активы</option>
+                    <option value="capital" {% if metric == "capital" %}selected{% endif %}>Капитал</option>
+                    <option value="profit" {% if metric == "profit" %}selected{% endif %}>Прибыль</option>
+                    <option value="loans" {% if metric == "loans" %}selected{% endif %}>Кредиты всего</option>
+                    <option value="deposits" {% if metric == "deposits" %}selected{% endif %}>Вклады</option>
+                    <option value="roa" {% if metric == "roa" %}selected{% endif %}>ROA</option>
+                    <option value="ltd" {% if metric == "ltd" %}selected{% endif %}>Кредиты / вклады</option>
+                    <option value="capital_ratio" {% if metric == "capital_ratio" %}selected{% endif %}>Достаточность капитала</option>
+                    <option value="liquidity" {% if metric == "liquidity" %}selected{% endif %}>Ликвидность</option>
+                </select>
+            </label>
+            
+            <button type="submit">Сравнить</button>
+        </div>
+        
+    </form>
+</div>
+
+{% if compare_data %}
+    {% if compare_data|length < 2 %}
+    <div class="compare-error">
+        Выберите минимум 2 банка для сравнения
+    </div>
+    {% else %}
+    
+    
+    <div class="section-title">Динамика показателя: {{ metric_name }}</div>
+    
+    <div class="panel">
+        <div class="bank-legend">
+            {% for bank in compare_data %}
+            <div class="legend-item">
+                <div class="legend-color" style="border-color: 
+                    {% if loop.index == 1 %}#8b3c2c
+                    {% elif loop.index == 2 %}#3d5a3c
+                    {% elif loop.index == 3 %}#465078
+                    {% elif loop.index == 4 %}#b48c3c
+                    {% endif %};">
+                </div>
+                <span>{{ bank.name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <canvas id="compareChart"></canvas>
+    </div>
+    
+    
+    <div class="section-title">Сравнение показателей за {{ month | format_month }}</div>
+    
+    <div class="compare-table-wrapper">
+        <table class="compare-table">
+            <thead>
+                <tr>
+                    <th>Показатель</th>
+                    {% for bank in compare_data %}
+                    <th class="num">{{ bank.name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td><b>Активы</b></td>
+                    {% for bank in compare_data %}
+                    <td class="num">{{ bank.metrics["Активы"] | format_metric_value("assets") }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><b>Капитал</b></td>
+                    {% for bank in compare_data %}
+                    <td class="num">{{ bank.metrics["Капитал"] | format_metric_value("capital") }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><b>Прибыль</b></td>
+                    {% for bank in compare_data %}
+                    <td class="num">{{ bank.metrics["Прибыль"] | format_metric_value("profit") }}</td>
+                    {% endfor %}
+                </tr>
+                
+                
+                <tr>
+                    <td><b>ROA (рентабельность)</b></td>
+                    {% for bank in compare_data %}
+                    <td class="num">{{ bank.metrics["ROA (рентабельность)"] | format_metric_value("roa") }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><b>Кредиты / вклады</b></td>
+                    {% for bank in compare_data %}
+                    <td class="num">{{ bank.metrics["LTD (кредиты/вклады)"] | format_metric_value("ltd") }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><b>Ликвидность</b></td>
+                    {% for bank in compare_data %}
+                    <td class="num">{{ bank.metrics["Ликвидность"] | format_metric_value("liquidity") }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><b>Достаточность капитала</b></td>
+                    {% for bank in compare_data %}
+                    <td class="num">{{ bank.metrics["Достаточность капитала"] | format_metric_value("capital_ratio") }}</td>
+                    {% endfor %}
+                </tr>
+                
+                
+                <tr>
+                    <td><b>Кредиты физлицам</b></td>
+                    {% for bank in compare_data %}
+                    <td class="num">{{ bank.metrics["Кредиты физлицам"] | format_metric_value("assets") }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><b>Кредиты юрлицам</b></td>
+                    {% for bank in compare_data %}
+                    <td class="num">{{ bank.metrics["Кредиты юрлицам"] | format_metric_value("assets") }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><b>Кредиты всего</b></td>
+                    {% for bank in compare_data %}
+                    <td class="num">{{ bank.metrics["Кредиты всего"] | format_metric_value("loans") }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><b>Вклады</b></td>
+                    {% for bank in compare_data %}
+                    <td class="num">{{ bank.metrics["Вклады"] | format_metric_value("deposits") }}</td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    {% endif %}
+    
+{% else %}
+    <div class="compare-hint">
+        Выберите от 2 до 4 банков и нажмите "Сравнить", чтобы увидеть результаты
+    </div>
+{% endif %}
+
+</div>
+
+{% if chart_data and chart_data.datasets %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const chartData = {{ chart_data | tojson }};
+    
+    const ctx = document.getElementById('compareChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                },
+                tooltip: {
+                    enabled: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            {% if metric in ['roa', 'ltd', 'capital_ratio', 'liquidity'] %}
+                            return value.toFixed(1) + '%';
+                            {% else %}
+                            if (value >= 1000000) {
+                                return (value / 1000000).toFixed(1) + ' млн';
+                            } else if (value >= 1000) {
+                                return (value / 1000).toFixed(1) + ' тыс';
+                            }
+                            return value;
+                            {% endif %}
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxTicksLimit: 12,
+                        callback: function(value, index, values) {
+                            const monthStr = chartData.labels[index];
+                            const year = monthStr.substring(0, 4);
+                            const month = monthStr.substring(4, 6);
+                            const monthNames = ['', 'янв', 'фев', 'мар', 'апр', 'май', 'июн', 
+                                               'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+                            return monthNames[parseInt(month)] + ' ' + year;
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
+
+</body>
+</html>

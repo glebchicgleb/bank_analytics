@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Топ банков</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="page">
+
+<a class="back-link" href="/">← Назад к списку банков</a>
+
+<h1>Топ банков</h1>
+
+<div class="section-title">Параметры рейтинга</div>
+
+<div class="panel">
+    <form method="get" action="/top" class="top-form">
+
+        <label>Период:</label>
+        <select name="month">
+            {% for m in months %}
+                <option value="{{ m }}" {% if m == month %}selected{% endif %}>
+                    {{ m | format_month }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label>Показатель:</label>
+        <select name="metric">
+            <option value="assets" {% if metric == "assets" %}selected{% endif %}>Активы</option>
+            <option value="capital" {% if metric == "capital" %}selected{% endif %}>Капитал</option>
+            <option value="profit" {% if metric == "profit" %}selected{% endif %}>Прибыль</option>
+            <option value="loans" {% if metric == "loans" %}selected{% endif %}>Кредиты всего</option>
+            <option value="deposits" {% if metric == "deposits" %}selected{% endif %}>Вклады</option>
+            <option value="roa" {% if metric == "roa" %}selected{% endif %}>ROA</option>
+            <option value="ltd" {% if metric == "ltd" %}selected{% endif %}>Кредиты / вклады</option>
+            <option value="capital_ratio" {% if metric == "capital_ratio" %}selected{% endif %}>Достаточность капитала</option>
+            <option value="liquidity" {% if metric == "liquidity" %}selected{% endif %}>Ликвидность</option>
+        </select>
+
+        <button type="submit">Показать</button>
+
+    </form>
+</div>
+
+<div class="section-title">Топ-10 по показателю: {{ metric_name }}</div>
+
+<div class="panel">
+    <table>
+        <tr>
+            <th>Место</th>
+            <th>Код</th>
+            <th>Название банка</th>
+            <th>Значение</th>
+            <th>Действие</th>
+        </tr>
+
+        {% for bank in top_banks %}
+        <tr>
+            <td class="num">{{ bank.place }}</td>
+            <td class="num">{{ bank.REGN }}</td>
+            <td>{{ bank.bank_name }}</td>
+            <td class="num">
+                {% if metric in ['assets', 'capital', 'profit', 'loans', 'deposits'] %}
+                {{ "{:,.0f}".format(bank.metric_value).replace(",", ".") }} руб
+                {% elif metric in ['roa', 'ltd', 'capital_ratio', 'liquidity'] %}
+                {{ "{:.2f}%".format(bank.metric_value) }}
+                {% else %}
+                {{ "{:,.2f}".format(bank.metric_value) }}
+                {% endif %}
+            </td>
+            <td>
+                <a class="button-link" href="/bank/{{ bank.REGN }}?month={{ month }}">Открыть карточку</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+</div>
+
+</body>
+</html>

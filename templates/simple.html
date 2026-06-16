@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bank Analytics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="page">
+
+    <div class="system-bar">
+        <div>
+            <div class="system-title">Bank Analytics</div>
+            <div class="system-subtitle">Система анализа банковской отчетности Банка России</div>
+        </div>
+        <div class="system-period">Последний загруженный период: {{ latest_month | format_month }}</div>
+    </div>
+
+    <div class="layout-main">
+
+        <div class="content-wide">
+
+            <div class="section-title">Поиск банка</div>
+
+            <div class="panel">
+                <form class="search-form" method="get" action="/">
+                    <input 
+                        type="text" 
+                        name="q" 
+                        placeholder="Название или регистрационный код"
+                        value="{{ query }}"
+                    >
+                    <button type="submit">Найти</button>
+                    {% if query %}
+                        <a class="reset-link" href="/">Сбросить</a>
+                    {% endif %}
+                </form>
+            </div>
+
+            <div class="section-title">Список банков</div>
+
+            <div class="panel">
+                <table>
+                    <tr>
+                        <th>Код</th>
+                        <th>Название</th>
+                        <th>Действие</th>
+                    </tr>
+                    {% for bank in banks %}
+                    <tr>
+                        <td class="num">{{ bank.REGN }}</td>
+                        <td>{{ bank.bank_name }}</td>
+                        <td>
+                            <a class="button-link" href="/bank/{{ bank.REGN }}">Открыть карточку</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+        </div>
+
+        <div class="side-column">
+
+            <div class="section-title">Навигация</div>
+
+            <div class="nav-links">
+                <a class="button-link full" href="/top">Топ банков</a>
+                <a class="button-link full" href="/compare">Сравнение банков</a>
+            </div>
+
+            <div class="section-title">Сведения</div>
+
+            <div class="panel small-panel">
+                <div class="small-row">
+                    <span>Банков найдено</span>
+                    <b class="num">{{ banks|length }}</b>
+                </div>
+                <div class="small-row">
+                    <span>Источник</span>
+                    <b>ЦБ РФ</b>
+                </div>
+                <div class="small-row">
+                    <span>Формат</span>
+                    <b>Форма 101</b>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>
