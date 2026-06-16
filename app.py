@@ -68,7 +68,6 @@ def bank_page(regn):
 
 @app.template_filter('format_metric_value')
 def format_metric_value(value, metric_key):
-    """Форматирует значение метрики в зависимости от её типа"""
     money_metrics = ["assets", "capital", "profit", "loans", "deposits"]
     percent_metrics = ["roa", "ltd", "capital_ratio", "liquidity"]
     
